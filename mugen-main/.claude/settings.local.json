@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Steven/Downloads/app movil/mugen-api/**)",
+      "Bash(php artisan *)",
+      "Bash(npm list *)",
+      "Bash(dir C:\\\\Users\\\\Steven\\\\Downloads\\\\app movil\\\\mugen-api\\\\database\\\\migrations *)",
+      "Bash(npx expo *)",
+      "Bash(dir \"C:\\\\Users\\\\Steven\\\\Downloads\\\\app movil\\\\mugen\\\\app\\\\modal.tsx\")",
+      "Bash(dir \"C:\\\\Users\\\\Steven\\\\Downloads\\\\app movil\\\\mugen\\\\app\\\\modal\")",
+      "Bash(Get-Content storage\\\\logs\\\\laravel.log -Tail 50)"
+    ]
+  }
+}
