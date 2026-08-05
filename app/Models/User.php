@@ -17,7 +17,8 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'password',
-        'username', 'bio', 'weight', 'height', 'avatar',
+        'username', 'bio', 'weight', 'height', 'avatar', 'is_admin',
+        'push_token', 'google_id',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -27,13 +28,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'is_admin'          => 'boolean',
         ];
     }
 
-    public function workouts()
-    {
-        return $this->hasMany(Workout::class);
-    }
+    public function workouts()    { return $this->hasMany(Workout::class); }
+    public function attendances() { return $this->hasMany(\App\Models\Attendance::class); }
+    public function badges()      { return $this->hasMany(\App\Models\UserBadge::class); }
 
     public function challenges()
     {

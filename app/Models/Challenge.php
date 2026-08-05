@@ -19,6 +19,9 @@ class Challenge extends Model
         'use_location',
         'meeting_point',
         'use_camera',
+        'gym_lat',
+        'gym_lng',
+        'gym_radius_meters',
     ];
 
     protected $casts = [
@@ -26,6 +29,8 @@ class Challenge extends Model
         'use_location'      => 'boolean',
         'use_camera'        => 'boolean',
         'start_date'        => 'date',
+        'gym_lat'           => 'float',
+        'gym_lng'           => 'float',
     ];
 
     public function user()

@@ -40,16 +40,17 @@ class WorkoutController extends Controller
     {
         $user = $request->user();
 
-        $totalWorkouts  = $user->workouts()->count();
-        $totalHours     = (int) round($user->workouts()->sum('duration_minutes') / 60);
-        $totalCalories  = (int) $user->workouts()->sum('calories');
-        $totalMinutes   = (int) $user->workouts()->sum('duration_minutes');
-        $totalReps      = (int) $user->workouts()->sum('reps');
-        $streak         = $this->calculateStreak($user);
-        $todayWorkouts  = (int) $user->workouts()->whereDate('created_at', today())->count();
-        $todayCalories  = (int) $user->workouts()->whereDate('created_at', today())->sum('calories');
-        $todayMinutes   = (int) $user->workouts()->whereDate('created_at', today())->sum('duration_minutes');
-        $points         = $totalWorkouts * 10 + $totalHours * 5;
+        $totalWorkouts   = $user->workouts()->count();
+        $totalHours      = (int) round($user->workouts()->sum('duration_minutes') / 60);
+        $totalCalories   = (int) $user->workouts()->sum('calories');
+        $totalMinutes    = (int) $user->workouts()->sum('duration_minutes');
+        $totalReps       = (int) $user->workouts()->sum('reps');
+        $streak          = $this->calculateAttendanceStreak($user);
+        $todayWorkouts   = (int) $user->workouts()->whereDate('created_at', today())->count();
+        $todayCalories   = (int) $user->workouts()->whereDate('created_at', today())->sum('calories');
+        $todayMinutes    = (int) $user->workouts()->whereDate('created_at', today())->sum('duration_minutes');
+        $attendanceCount = \App\Models\Attendance::where('user_id', $user->id)->count();
+        $points          = $totalWorkouts * 10 + $totalHours * 5 + $attendanceCount * 20;
 
         return response()->json([
             'total_workouts'  => $totalWorkouts,
@@ -91,20 +92,24 @@ class WorkoutController extends Controller
         return response()->json(['message' => 'Workout eliminado correctamente.']);
     }
 
-    private function calculateStreak($user): int
+    private function calculateAttendanceStreak($user): int
     {
         $streak = 0;
         $date   = now()->startOfDay();
 
-        // If today has no workout, still check from yesterday
-        if (! $user->workouts()->whereDate('created_at', $date->toDateString())->exists()) {
+        $hasToday = \App\Models\Attendance::where('user_id', $user->id)
+            ->where('attended_date', $date->toDateString())
+            ->exists();
+
+        if (!$hasToday) {
             $date = $date->subDay();
         }
 
         while (true) {
-            if (! $user->workouts()->whereDate('created_at', $date->toDateString())->exists()) {
-                break;
-            }
+            $exists = \App\Models\Attendance::where('user_id', $user->id)
+                ->where('attended_date', $date->toDateString())
+                ->exists();
+            if (!$exists) break;
             $streak++;
             $date = $date->subDay();
         }

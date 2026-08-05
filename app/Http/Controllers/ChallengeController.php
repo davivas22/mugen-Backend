@@ -39,6 +39,8 @@ class ChallengeController extends Controller
             'use_location'      => $request->use_location === '1',
             'meeting_point'     => $request->meeting_point ?? '',
             'use_camera'        => $request->use_camera === '1',
+            'gym_lat'           => $request->gym_lat ?? null,
+            'gym_lng'           => $request->gym_lng ?? null,
         ]);
 
         // El creador también es miembro
@@ -109,40 +111,59 @@ class ChallengeController extends Controller
 
         $participants = DB::table('challenge_members')
             ->join('users', 'users.id', '=', 'challenge_members.user_id')
-            ->leftJoin('workouts', function ($join) use ($id, $dateFrom) {
-                $join->on('workouts.user_id', '=', 'users.id')
-                     ->where('workouts.challenge_id', '=', $id)
-                     ->where('workouts.created_at', '>=', $dateFrom);
-            })
+            ->leftJoinSub(
+                DB::table('workouts')
+                    ->where('challenge_id', $id)
+                    ->where('created_at', '>=', $dateFrom)
+                    ->select('user_id',
+                        DB::raw('COUNT(*) as sessions'),
+                        DB::raw('COALESCE(SUM(reps), 0) as total_reps'))
+                    ->groupBy('user_id'),
+                'w', 'w.user_id', '=', 'users.id'
+            )
+            ->leftJoinSub(
+                DB::table('attendances')
+                    ->where('challenge_id', $id)
+                    ->where('attended_date', '>=', $dateFrom->toDateString())
+                    ->select('user_id', DB::raw('COUNT(*) as attendance_count'))
+                    ->groupBy('user_id'),
+                'a', 'a.user_id', '=', 'users.id'
+            )
             ->where('challenge_members.challenge_id', $id)
             ->select(
                 'users.id',
                 'users.name as username',
                 'users.avatar',
-                DB::raw('COALESCE(COUNT(workouts.id), 0) as sessions'),
-                DB::raw('COALESCE(COUNT(workouts.id) * 10 + SUM(workouts.reps), 0) as points'),
-                DB::raw('COALESCE(SUM(workouts.reps), 0) as total_reps')
+                DB::raw('COALESCE(w.sessions, 0) as sessions'),
+                DB::raw('COALESCE(w.total_reps, 0) as total_reps'),
+                DB::raw('COALESCE(a.attendance_count, 0) as attendance_count'),
+                DB::raw('(COALESCE(w.sessions, 0) * 10 + COALESCE(w.total_reps, 0) + COALESCE(a.attendance_count, 0) * 20) as points')
             )
-            ->groupBy('users.id', 'users.name', 'users.avatar')
             ->orderByDesc('points')
             ->get()
             ->map(fn ($item, $i) => [
-                'id'         => $item->id,
-                'username'   => $item->username,
-                'avatar_url' => $item->avatar,
-                'rank'       => $i + 1,
-                'points'     => (int) $item->points,
-                'sessions'   => (int) $item->sessions,
-                'total_reps' => (int) $item->total_reps,
+                'id'               => $item->id,
+                'username'         => $item->username,
+                'avatar_url'       => $item->avatar,
+                'rank'             => $i + 1,
+                'points'           => (int) $item->points,
+                'sessions'         => (int) $item->sessions,
+                'total_reps'       => (int) $item->total_reps,
+                'attendance_count' => (int) $item->attendance_count,
             ]);
 
         $challenge = Challenge::find($id);
 
         return response()->json([
             'challenge'    => [
-                'name'        => $challenge->name ?? '',
-                'invite_code' => $challenge->invite_code ?? '',
-                'user_id'     => $challenge->user_id ?? null,
+                'name'              => $challenge->name ?? '',
+                'invite_code'       => $challenge->invite_code ?? '',
+                'user_id'           => $challenge->user_id ?? null,
+                'use_location'      => (bool) ($challenge->use_location ?? false),
+                'use_camera'        => (bool) ($challenge->use_camera ?? false),
+                'gym_lat'           => $challenge->gym_lat ? (float) $challenge->gym_lat : null,
+                'gym_lng'           => $challenge->gym_lng ? (float) $challenge->gym_lng : null,
+                'gym_radius_meters' => (int) ($challenge->gym_radius_meters ?? 200),
             ],
             'participants' => $participants,
         ]);
@@ -151,16 +172,21 @@ class ChallengeController extends Controller
     public function update(Request $request, $id)
     {
         $challenge = Challenge::findOrFail($id);
+        $user = $request->user();
 
-        if ($challenge->user_id !== auth()->id()) {
+        // Admin puede editar cualquier sala; el creador sólo la suya
+        if (!$user->is_admin && $challenge->user_id !== $user->id) {
             return response()->json(['message' => 'No tienes permiso para editar esta sala.'], 403);
         }
 
         $request->validate([
-            'name' => 'required|string|max:50',
+            'name'           => 'sometimes|string|max:50',
+            'duration_days'  => 'sometimes|integer|min:1',
+            'start_date'     => 'sometimes|date',
+            'challenge_mode' => 'sometimes|string|in:tracking,honor',
         ]);
 
-        $challenge->update(['name' => $request->name]);
+        $challenge->update($request->only(['name', 'duration_days', 'start_date', 'challenge_mode']));
 
         return response()->json(['challenge' => $challenge->fresh()]);
     }
