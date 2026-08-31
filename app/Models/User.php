@@ -16,7 +16,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-        'name', 'email', 'password',
+        'name', 'email', 'password', 'birthdate',
         'username', 'bio', 'weight', 'height', 'avatar', 'is_admin',
         'push_token', 'google_id',
     ];
@@ -27,6 +27,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'birthdate'         => 'date',
             'password'          => 'hashed',
             'is_admin'          => 'boolean',
         ];

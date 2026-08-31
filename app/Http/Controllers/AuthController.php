@@ -14,15 +14,19 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
-            'password' => 'required|min:6|confirmed',
+            'name'      => 'required|string|max:255',
+            'email'     => 'required|email|unique:users,email',
+            'birthdate' => 'required|date|before_or_equal:' . now()->subYears(18)->format('Y-m-d'),
+            'password'  => 'required|min:6|confirmed',
+        ], [
+            'birthdate.before_or_equal' => 'No se puede registrar: debes ser mayor de edad (18 años o más).',
         ]);
 
         $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
+            'name'      => $request->name,
+            'email'     => $request->email,
+            'birthdate' => $request->birthdate,
+            'password'  => Hash::make($request->password),
         ]);
 
         $token = $user->createToken('mugen-app')->plainTextToken;
@@ -92,10 +96,10 @@ class AuthController extends Controller
             ->first();
 
         if ($user) {
-            // Vincular google_id si aún no está
-            if (!$user->google_id) {
-                $user->update(['google_id' => $g['sub']]);
-            }
+            $updates = [];
+            if (!$user->google_id) $updates['google_id'] = $g['sub'];
+            if (!empty($g['picture']))  $updates['avatar'] = $g['picture'];
+            if ($updates) $user->update($updates);
         } else {
             $baseUsername = Str::slug($g['name'] ?? explode('@', $g['email'])[0]);
             $username     = $baseUsername;

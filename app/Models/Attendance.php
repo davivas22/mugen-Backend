@@ -12,4 +12,5 @@ class Attendance extends Model
 
     public function user()      { return $this->belongsTo(User::class); }
     public function challenge() { return $this->belongsTo(Challenge::class); }
+    public function confirmer() { return $this->belongsTo(User::class, 'confirmed_by'); }
 }

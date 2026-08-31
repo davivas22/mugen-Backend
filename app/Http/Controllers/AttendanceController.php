@@ -263,7 +263,10 @@ class AttendanceController extends Controller
 
         $gymDays   = $challenge->gym_days_per_week ?? [];
         $streak    = $this->calculateChallengeStreak($attendance->user_id, $attendance->challenge_id, $gymDays);
-        $newBadges = BadgeService::checkAndAward($attendance->user_id, (int) $attendance->challenge_id, $streak);
+        $newBadges = BadgeService::checkAndAward($attendance->user_id, (int) $attendance->challenge_id, $streak, [
+            'hour' => $attendance->created_at->hour,
+        ]);
+        BadgeService::checkConfirmadorBadge(auth()->id(), (int) $attendance->challenge_id);
 
         // Notificar al dueño de la asistencia
         $owner = \App\Models\User::find($attendance->user_id);

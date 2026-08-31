@@ -4,6 +4,11 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BadgeController;
+use App\Http\Controllers\PledgeController;
+use App\Http\Controllers\SalaBattleController;
+use App\Http\Controllers\SocialBetController;
+use App\Http\Controllers\WeeklyCommitmentController;
+use App\Http\Controllers\WrappedController;
 use App\Http\Controllers\ChallengeController;
 use App\Http\Controllers\JourneyPhotoController;
 use App\Http\Controllers\RoomMessageController;
@@ -30,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/challenges/join/{code}',  [ChallengeController::class, 'join']);
     Route::get('/challenges/{id}/leaderboard', [ChallengeController::class, 'leaderboard']);
     Route::put('/challenges/{id}',    [ChallengeController::class, 'update']);
+    Route::post('/challenges/{id}',   [ChallengeController::class, 'update']); // multipart/form-data para cover_image
     Route::delete('/challenges/{id}', [ChallengeController::class, 'destroy']);
 
     // Journey — galería de progreso por sala
@@ -72,6 +78,29 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Badges / Logros
     Route::get('/user/badges', [BadgeController::class, 'index']);
+
+    // Wrapped
+    Route::get('/challenges/{id}/wrapped', [WrappedController::class, 'show']);
+
+    // La Apuesta del Mes
+    Route::get('/challenges/{id}/pledges',  [PledgeController::class, 'index']);
+    Route::post('/challenges/{id}/pledges', [PledgeController::class, 'store']);
+
+    // Apuestas sociales entre miembros
+    Route::get('/challenges/{id}/social-bets',   [SocialBetController::class, 'index']);
+    Route::post('/challenges/{id}/social-bets',  [SocialBetController::class, 'store']);
+    Route::post('/social-bets/{id}/resolve',     [SocialBetController::class, 'resolve']);
+    Route::delete('/social-bets/{id}',           [SocialBetController::class, 'destroy']);
+
+    // Compromiso Semanal
+    Route::get('/challenges/{id}/commitments',  [WeeklyCommitmentController::class, 'index']);
+    Route::post('/challenges/{id}/commitments', [WeeklyCommitmentController::class, 'store']);
+
+    // Sala vs Sala
+    Route::get('/battles',           [SalaBattleController::class, 'index']);
+    Route::post('/battles',          [SalaBattleController::class, 'store']);
+    Route::post('/battles/{id}/accept', [SalaBattleController::class, 'accept']);
+    Route::get('/battles/{id}',      [SalaBattleController::class, 'show']);
 
     // Admin — solo usuarios con is_admin = true
     Route::middleware('is_admin')->prefix('admin')->group(function () {

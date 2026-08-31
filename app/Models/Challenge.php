@@ -22,12 +22,14 @@ class Challenge extends Model
         'gym_lat',
         'gym_lng',
         'gym_radius_meters',
+        'enable_bets',
     ];
 
     protected $casts = [
         'gym_days_per_week' => 'array',
         'use_location'      => 'boolean',
         'use_camera'        => 'boolean',
+        'enable_bets'       => 'boolean',
         'start_date'        => 'date',
         'gym_lat'           => 'float',
         'gym_lng'           => 'float',

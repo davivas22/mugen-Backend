@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Challenge;
+use App\Services\BadgeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -45,6 +46,8 @@ class ChallengeController extends Controller
 
         // El creador también es miembro
         $challenge->members()->attach(auth()->id(), ['joined_at' => now()]);
+
+        BadgeService::checkFounderBadge(auth()->id(), $challenge->id);
 
         return response()->json(['challenge' => $challenge], 201);
     }
@@ -161,6 +164,7 @@ class ChallengeController extends Controller
                 'user_id'           => $challenge->user_id ?? null,
                 'use_location'      => (bool) ($challenge->use_location ?? false),
                 'use_camera'        => (bool) ($challenge->use_camera ?? false),
+                'enable_bets'       => (bool) ($challenge->enable_bets ?? false),
                 'gym_lat'           => $challenge->gym_lat ? (float) $challenge->gym_lat : null,
                 'gym_lng'           => $challenge->gym_lng ? (float) $challenge->gym_lng : null,
                 'gym_radius_meters' => (int) ($challenge->gym_radius_meters ?? 200),
@@ -184,9 +188,25 @@ class ChallengeController extends Controller
             'duration_days'  => 'sometimes|integer|min:1',
             'start_date'     => 'sometimes|date',
             'challenge_mode' => 'sometimes|string|in:tracking,honor',
+            'cover_image'    => 'nullable|image|max:5120',
+            'enable_bets'    => 'sometimes|boolean',
         ]);
 
-        $challenge->update($request->only(['name', 'duration_days', 'start_date', 'challenge_mode']));
+        $data = $request->only(['name', 'duration_days', 'start_date', 'challenge_mode']);
+
+        if ($request->has('enable_bets')) {
+            $data['enable_bets'] = filter_var($request->enable_bets, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if ($request->hasFile('cover_image')) {
+            // Delete old cover if exists
+            if ($challenge->cover_image) {
+                \Storage::disk('public')->delete($challenge->cover_image);
+            }
+            $data['cover_image'] = $request->file('cover_image')->store('challenges', 'public');
+        }
+
+        $challenge->update($data);
 
         return response()->json(['challenge' => $challenge->fresh()]);
     }

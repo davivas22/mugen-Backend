@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Aviso de racha en peligro — todos los días a las 8pm
 Schedule::command('streak:warn')->dailyAt('20:00');
+
+// El Fantasma — detectar miembros ausentes 3+ días, notificar a las 7pm
+Schedule::command('mugen:check-ghosts')->dailyAt('19:00');
