@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Challenge;
+use App\Models\RoomJoinRequest;
 use App\Services\BadgeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,7 @@ class ChallengeController extends Controller
             'use_camera'        => $request->use_camera === '1',
             'gym_lat'           => $request->gym_lat ?? null,
             'gym_lng'           => $request->gym_lng ?? null,
+            'is_private'        => $request->is_private === '1',
         ]);
 
         // El creador también es miembro
@@ -96,9 +98,85 @@ class ChallengeController extends Controller
             return response()->json(['message' => 'Ya eres miembro de este desafío.'], 409);
         }
 
+        if ($challenge->is_private && $challenge->user_id !== auth()->id()) {
+            $existing = RoomJoinRequest::where('challenge_id', $challenge->id)
+                ->where('user_id', auth()->id())
+                ->first();
+
+            if ($existing) {
+                if ($existing->status === 'pending') {
+                    return response()->json(['message' => 'Ya tienes una solicitud pendiente.', 'pending' => true]);
+                }
+                if ($existing->status === 'rejected') {
+                    $existing->update(['status' => 'pending']);
+                    return response()->json(['pending' => true], 201);
+                }
+            } else {
+                RoomJoinRequest::create([
+                    'challenge_id' => $challenge->id,
+                    'user_id'      => auth()->id(),
+                    'status'       => 'pending',
+                ]);
+            }
+
+            return response()->json(['pending' => true], 201);
+        }
+
         $challenge->members()->attach(auth()->id(), ['joined_at' => now()]);
 
-        return response()->json(['challenge' => $challenge->load('user:id,name')], 200);
+        return response()->json(['challenge' => $challenge->load('user:id,name'), 'pending' => false], 200);
+    }
+
+    // GET /challenges/{id}/requests (creador)
+    public function joinRequests(Request $request, $id)
+    {
+        $challenge = Challenge::findOrFail($id);
+
+        if ($challenge->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Solo el creador puede ver las solicitudes.'], 403);
+        }
+
+        $requests = RoomJoinRequest::where('challenge_id', $id)
+            ->where('status', 'pending')
+            ->with('user:id,name,avatar')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json(['requests' => $requests]);
+    }
+
+    // POST /challenges/{id}/requests/{requestId}/approve
+    public function approveRequest(Request $request, $id, $requestId)
+    {
+        $challenge = Challenge::findOrFail($id);
+
+        if ($challenge->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Solo el creador puede aprobar solicitudes.'], 403);
+        }
+
+        $joinRequest = RoomJoinRequest::where('challenge_id', $id)->findOrFail($requestId);
+
+        if (!$challenge->members()->where('user_id', $joinRequest->user_id)->exists()) {
+            $challenge->members()->attach($joinRequest->user_id, ['joined_at' => now()]);
+        }
+        $joinRequest->update(['status' => 'approved']);
+
+        return response()->json(['message' => 'Solicitud aprobada.']);
+    }
+
+    // POST /challenges/{id}/requests/{requestId}/reject
+    public function rejectRequest(Request $request, $id, $requestId)
+    {
+        $challenge = Challenge::findOrFail($id);
+
+        if ($challenge->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Solo el creador puede rechazar solicitudes.'], 403);
+        }
+
+        $joinRequest = RoomJoinRequest::where('challenge_id', $id)->findOrFail($requestId);
+        $joinRequest->update(['status' => 'rejected']);
+
+        return response()->json(['message' => 'Solicitud rechazada.']);
     }
 
     public function leaderboard($id)
@@ -162,6 +240,10 @@ class ChallengeController extends Controller
                 'name'              => $challenge->name ?? '',
                 'invite_code'       => $challenge->invite_code ?? '',
                 'user_id'           => $challenge->user_id ?? null,
+                'cover_image'       => $challenge->cover_image ?? null,
+                'start_date'        => $challenge->start_date?->toDateString(),
+                'duration_days'     => (int) ($challenge->duration_days ?? 30),
+                'is_private'        => (bool) ($challenge->is_private ?? false),
                 'use_location'      => (bool) ($challenge->use_location ?? false),
                 'use_camera'        => (bool) ($challenge->use_camera ?? false),
                 'enable_bets'       => (bool) ($challenge->enable_bets ?? false),

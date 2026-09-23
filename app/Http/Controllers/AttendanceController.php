@@ -288,6 +288,32 @@ class AttendanceController extends Controller
         ]);
     }
 
+    // POST /attendances/{id}/reject
+    public function rejectAttendance(Request $request, $attendanceId)
+    {
+        $attendance = Attendance::findOrFail($attendanceId);
+        $challenge  = Challenge::findOrFail($attendance->challenge_id);
+
+        if (!$challenge->members()->where('user_id', auth()->id())->exists()) {
+            return response()->json(['message' => 'No eres miembro de esta sala.'], 403);
+        }
+
+        if ($attendance->user_id === auth()->id()) {
+            return response()->json(['message' => 'No puedes rechazar tu propia asistencia.'], 422);
+        }
+
+        if ($attendance->status === 'confirmed') {
+            return response()->json(['message' => 'Esta asistencia ya fue confirmada.'], 422);
+        }
+
+        if ($attendance->photo_path) {
+            Storage::disk('public')->delete($attendance->photo_path);
+        }
+        $attendance->delete();
+
+        return response()->json(['message' => 'Asistencia rechazada.']);
+    }
+
     // POST /challenges/{id}/gym-location (creator only)
     public function setGymLocation(Request $request, $challengeId)
     {

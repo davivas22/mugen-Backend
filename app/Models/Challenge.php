@@ -23,6 +23,7 @@ class Challenge extends Model
         'gym_lng',
         'gym_radius_meters',
         'enable_bets',
+        'is_private',
     ];
 
     protected $casts = [
@@ -30,6 +31,7 @@ class Challenge extends Model
         'use_location'      => 'boolean',
         'use_camera'        => 'boolean',
         'enable_bets'       => 'boolean',
+        'is_private'        => 'boolean',
         'start_date'        => 'date',
         'gym_lat'           => 'float',
         'gym_lng'           => 'float',
@@ -45,6 +47,11 @@ class Challenge extends Model
         return $this->belongsToMany(User::class, 'challenge_members')
                     ->withPivot('joined_at')
                     ->withTimestamps();
+    }
+
+    public function joinRequests()
+    {
+        return $this->hasMany(RoomJoinRequest::class);
     }
 
     public static function generateInviteCode(): string

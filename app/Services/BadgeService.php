@@ -59,10 +59,10 @@ class BadgeService
         $prev = Attendance::where('user_id', $userId)
             ->where('challenge_id', $challengeId)
             ->where('status', 'confirmed')
-            ->orderByDesc('attended_at')
+            ->orderByDesc('attended_date')
             ->skip(1)->first();
 
-        if ($prev && $prev->attended_at->diffInDays(now()) >= 7) {
+        if ($prev && $prev->attended_date->diffInDays(now()) >= 7) {
             if (self::award($userId, 'comeback', $challengeId)) {
                 $newBadges[] = 'comeback';
             }
@@ -80,11 +80,11 @@ class BadgeService
         // fin_de_semana — sábado (WEEKDAY=5) y domingo (WEEKDAY=6) en los últimos 14 días
         $since = now()->subDays(14);
         $hasSat = Attendance::where('user_id', $userId)->where('status', 'confirmed')
-            ->where('attended_at', '>=', $since)
-            ->whereRaw('WEEKDAY(attended_at) = 5')->exists();
+            ->where('attended_date', '>=', $since)
+            ->whereRaw('WEEKDAY(attended_date) = 5')->exists();
         $hasSun = Attendance::where('user_id', $userId)->where('status', 'confirmed')
-            ->where('attended_at', '>=', $since)
-            ->whereRaw('WEEKDAY(attended_at) = 6')->exists();
+            ->where('attended_date', '>=', $since)
+            ->whereRaw('WEEKDAY(attended_date) = 6')->exists();
         if ($hasSat && $hasSun && self::award($userId, 'fin_de_semana', $challengeId)) {
             $newBadges[] = 'fin_de_semana';
         }

@@ -38,6 +38,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/challenges/{id}',   [ChallengeController::class, 'update']); // multipart/form-data para cover_image
     Route::delete('/challenges/{id}', [ChallengeController::class, 'destroy']);
 
+    // Solicitudes de ingreso — salas privadas
+    Route::get('/challenges/{id}/requests',                  [ChallengeController::class, 'joinRequests']);
+    Route::post('/challenges/{id}/requests/{requestId}/approve', [ChallengeController::class, 'approveRequest']);
+    Route::post('/challenges/{id}/requests/{requestId}/reject',  [ChallengeController::class, 'rejectRequest']);
+
     // Journey — galería de progreso por sala
     Route::get('/challenges/{id}/journey',  [JourneyPhotoController::class, 'index']);
     Route::post('/challenges/{id}/journey', [JourneyPhotoController::class, 'store']);
@@ -61,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/challenges/{id}/attend-camera',        [AttendanceController::class, 'attendCamera']);
     Route::get('/challenges/{id}/pending-attendances',   [AttendanceController::class, 'pendingAttendances']);
     Route::post('/attendances/{id}/confirm',             [AttendanceController::class, 'confirmAttendance']);
+    Route::post('/attendances/{id}/reject',              [AttendanceController::class, 'rejectAttendance']);
 
     // Mensajes de sala
     Route::get('/challenges/{id}/messages',  [RoomMessageController::class, 'index']);
